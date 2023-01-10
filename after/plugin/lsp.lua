@@ -9,7 +9,8 @@ local servers = {
 }
 
 local telescope_builtin = require('telescope.builtin')
-local on_attach = function(_, bufnr)
+local formatting_group = vim.api.nvim_create_augroup("LspFormatting", {})
+local on_attach = function(client, bufnr)
   local map = function(mode, l, r, opts)
     opts = opts or {}
     opts.buffer = bufnr
@@ -31,7 +32,21 @@ local on_attach = function(_, bufnr)
 
   map('n', '<leader>r', vim.lsp.buf.rename, { desc = '[r]ename' })
   map('n', '<leader>f', vim.lsp.buf.format, { desc = '[f]ormat' })
+  map('n', '<leader>wf', function() vim.cmd('noautocmd w') end, { desc = 'write [w]ithout [f]ormatting' })
   map('n', '<leader>ca', vim.lsp.buf.code_action, { desc = 'run [c]ode [a]ction' })
+
+  -- format on save (https://github.com/jose-elias-alvarez/null-ls.nvim/wiki/Formatting-on-save#code)
+  if client.supports_method("textDocument/formatting") then
+    vim.api.nvim_clear_autocmds({ group = formatting_group, buffer = bufnr })
+    vim.api.nvim_create_autocmd("BufWritePre", {
+      group = formatting_group,
+      buffer = bufnr,
+      callback = function()
+        vim.lsp.buf.format({ bufnr = bufnr })
+      end,
+    })
+  end
+
 end
 
 -- setup neodev _before_ lspconfig (https://github.com/folke/neodev.nvim#-setup)
@@ -60,6 +75,7 @@ mason_lspconfig.setup_handlers {
 vim.lsp.handlers["textDocument/hover"] = vim.lsp.with(vim.lsp.handlers.hover, { border = "rounded" })
 
 local null_ls = require("null-ls")
+
 null_ls.setup({
   sources = {
     null_ls.builtins.formatting.prettierd,
