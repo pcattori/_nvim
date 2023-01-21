@@ -6,7 +6,12 @@ local servers = {
     }
   },
   tsserver = {},
+  tailwindcss = {},
 }
+
+local formatting_filter = function(client)
+  return client.name ~= "tsserver"
+end
 
 local telescope_builtin = require('telescope.builtin')
 local formatting_group = vim.api.nvim_create_augroup("LspFormatting", {})
@@ -31,9 +36,16 @@ local on_attach = function(client, bufnr)
   map('n', '<leader>sS', telescope_builtin.lsp_dynamic_workspace_symbols, { desc = '[s]earch workspace [S]ymbols' })
 
   map('n', '<leader>r', vim.lsp.buf.rename, { desc = '[r]ename' })
-  map('n', '<leader>f', vim.lsp.buf.format, { desc = '[f]ormat' })
-  map('n', '<leader>wf', function() vim.cmd('noautocmd w') end, { desc = 'write [w]ithout [f]ormatting' })
+  map('n', '<leader>f', function()
+    vim.lsp.buf.format({ bufnr = bufnr, filter = formatting_filter })
+  end, { desc = '[f]ormat' })
+  map('n', '<leader>S', function() vim.cmd('noautocmd w') end, { desc = '[S]ave without formatting' })
   map('n', '<leader>ca', vim.lsp.buf.code_action, { desc = 'run [c]ode [a]ction' })
+
+  -- disable tsserver formatting (prefer prettier or eslint)
+  if client.name ~= 'tsserver' then
+    client.server_capabilities.document_formatting = false
+  end
 
   -- format on save (https://github.com/jose-elias-alvarez/null-ls.nvim/wiki/Formatting-on-save#code)
   if client.supports_method("textDocument/formatting") then
@@ -42,7 +54,10 @@ local on_attach = function(client, bufnr)
       group = formatting_group,
       buffer = bufnr,
       callback = function()
-        vim.lsp.buf.format({ bufnr = bufnr })
+        vim.lsp.buf.format({
+          bufnr = bufnr,
+          filter = formatting_filter,
+        })
       end,
     })
   end
@@ -75,12 +90,17 @@ mason_lspconfig.setup_handlers {
 vim.lsp.handlers["textDocument/hover"] = vim.lsp.with(vim.lsp.handlers.hover, { border = "rounded" })
 
 local null_ls = require("null-ls")
+local not_in_node_modules = require("null-ls.helpers").cache.by_bufnr(function(params)
+  return params.bufname:match("/node_modules/") == nil
+end)
 
 null_ls.setup({
   sources = {
     null_ls.builtins.formatting.prettierd,
     null_ls.builtins.formatting.eslint_d,
-    null_ls.builtins.diagnostics.eslint_d,
+    null_ls.builtins.diagnostics.eslint_d.with({
+      runtime_condition = not_in_node_modules
+    }),
   },
   on_attach = on_attach
 })

@@ -25,6 +25,7 @@ return require('packer').startup(function(use)
         run = function() pcall(require('nvim-treesitter.install').update { with_sync = true }) end }
     -- TODO treesitter context?
     -- TODO treesitter text objects?
+    use 'JoosepAlviste/nvim-ts-context-commentstring'
 
     -- lsp
     use 'williamboman/mason.nvim' -- manage lsp servers, dap servers, linters, formatters

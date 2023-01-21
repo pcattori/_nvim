@@ -1,5 +1,12 @@
 require('nvim-treesitter.configs').setup {
-  ensure_installed = { 'help', 'lua', 'javascript', 'typescript' },
+  ensure_installed = {
+    'css',
+    'help',
+    'lua',
+    'javascript',
+    'tsx',
+  },
+  context_commentstring = { enable = true, enable_autocmd = false },
   highlight = { enable = true },
   incremental_selection = {
     enable = true,
